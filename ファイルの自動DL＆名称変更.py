@@ -4,6 +4,7 @@ import time
 import PyPDF2
 import datetime
 import urllib.request
+import re
 
 import sys
 import os
@@ -17,7 +18,9 @@ from bs4 import BeautifulSoup
 # Excel
 READ_FILE_DIR = r'C:\Users\e12135\Downloads\DL2'
 CTRL_PORTABLE = True if not os.path.isdir(READ_FILE_DIR) else False
-READ_FILE_DIR = os.getcwd() if CTRL_PORTABLE else READ_FILE_DIR # フォルダが存在しないときはカレントフォルダ
+READ_FILE_DIR = os.getcwd() if CTRL_PORTABLE else READ_FILE_DIR # READ_FILE_DIRが存在しないときはカレントフォルダをREAD_FILE_DIRに設定
+
+TARGET_URL = 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryou/rinsyo/index_00014.html'
 
 PROVCODE = {
     '北海道': 1, '青森県': 2, '岩手県': 3, '宮城県': 4, '秋田県': 5, '山形県': 6, '福島県': 7, 
@@ -35,52 +38,62 @@ PROVCODE = {
 # main()
 #================================================================
 def main():
-    global temp1, temp2, temp3
-
-    #
-    base_url = 'https://www.mhlw.go.jp'
-    url = 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryou/rinsyo/index_00014.html'
-    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0",}
     
-    # ダウンロードリスト作成
+    #--------------------------------------------
+    # ダウンロードリスト（辞書型）作成
+    #  [I] TARGET_URL, PROVCODE
+    #  [O] dict_pdf_link
+    #--------------------------------------------
     global dict_pdf_link
-    list_pref = list(PROVCODE.keys())
     dict_pdf_link = dict()
+    # TARGET_URLからドメイン部を抽出 -> [base_url]
+    str_temp1 = re.split(r'//', TARGET_URL) # '//'で分割
+    str_temp2 = str_temp1[1].split('/') # '/'で分割
+    base_url = str_temp1[0] + '//' + str_temp2[0]
+    
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0",}
+    rr = requests.get(TARGET_URL, headers=headers)
+    html = rr.content
     try:
-        rr = requests.get(url, headers=headers)
-        html = rr.content
-        try:
-            soup = BeautifulSoup(html, "html.parser")
-            for aa in soup.find_all("a"):
-                link = base_url + aa.get("href")
-                name = aa.get_text()
-                if '.pdf' in link and list_pref.count(name) == 1:
-                    dict_pdf_link[name] = link
-        except Exception as ee:
-            sys.stderr.write("*** error *** in BeautifulSoup ***\n")
-            sys.stderr.write(str(ee) + "\n")
+        soup = BeautifulSoup(html, "html.parser")
+        list_pref = list(PROVCODE.keys()) # 都道府県名のリスト(PROVCODEからKeyを抽出してリスト化)
+        # HTMLの<a>タグを抽出
+        for aa in soup.find_all('a'):
+            # リンク先とリンクの表示名を取得（リンク表示名は都道府県名になっている）
+            name = aa.get_text()
+            link = base_url + aa.get('href')
+            if '.pdf' in link and list_pref.count(name) == 1:
+                # 辞書に要素を追加 Key:表示名(=都道府県名)、Value=リンク先のURL
+                dict_pdf_link[name] = link
     except Exception as ee:
-        sys.stderr.write("*** error *** in requests.get ***\n")
-        sys.stderr.write(str(ee) + "\n")
+        print(str(ee.__class__.__name__) + ' : ' + str(ee))
 
+    #--------------------------------------------
     # PDFをダウンロード
+    #  [I] dict_pdf_link
+    #  [O] dict_file_name
+    #--------------------------------------------
     global dict_file_name
     time_start = time.perf_counter()
     count = 0
+    print('[PDFをダウンロード]')
     dict_file_name = dict()
-    for pref, link in dict_pdf_link.items():
+    for pref, link in dict_pdf_link.items(): # 都道府県でループ
         # ダウンロード
         file = '{0:02}_{1}.pdf'.format(PROVCODE[pref], pref)
         urllib.request.urlretrieve(link, READ_FILE_DIR + "\\" + file)
         dict_file_name[pref] = file
+        print('  {0}'.format(file))
         # サーバーに負荷を掛けすぎないようにするためにスリープ
         time.sleep(0.5)
         #----- 進捗表示 -----
         count += 1
-        print('\r[PDFをダウンロード] {0}/{1}'.format(count, len(dict_pdf_link)), end="")
-    print(" ---> time:{0:.3f}".format(time.perf_counter() - time_start) + "[sec]")
+    print("完了 ---> time:{0:.3f}".format(time.perf_counter() - time_start) + "[sec]")
 
+    #--------------------------------------------
     # PDFのファイル名にファイル作成日を追加
+    #  [I] dict_file_name
+    #--------------------------------------------
     for pref, file in dict_file_name.items():
         with open(READ_FILE_DIR + '\\' + file, mode='rb') as f:
             reader = PyPDF2.PdfFileReader(f)
