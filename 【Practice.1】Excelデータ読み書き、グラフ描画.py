@@ -6,9 +6,6 @@ import sys
 import os
 
 
-#----- プロキシサーバー -----
-# 社内環境やPulseSecure使用の場合はコメントアウトを外す
-#os.environ["https_proxy"] = "http://g3.konicaminolta.jp:8080"
 
 #----- 入力ファイル -----
 # Excel
