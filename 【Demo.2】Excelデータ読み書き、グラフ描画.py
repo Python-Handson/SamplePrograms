@@ -67,7 +67,7 @@ def main():
     dict_header_format = dict()
     dict_header_format['スマートフォン'] = {'width':8, 'rotation':90, 'fillcol':'002060', 'txtcol':'FFFFFF', 'dtxtcol':'FF0000', 'dtxtformat':'0.0%'}
     # Excelファイルへ出力
-    wb = export_excel(_path=WRITE_FILE_PATH, _df=df_output_data, _header_height=100, _header_fmt=dict_header_format, _sheet_name='普及率', _index_name='都道府県')
+    wb = export_excel(_path=WRITE_FILE_PATH, _df=df_output_data, _col_width_=[12,10], _header_height=100, _header_fmt=dict_header_format, _sheet_name='普及率', _index_name='都道府県')
     list_img = [(graph_file_path, 'B2', True)] # 0:画像ファイルPath, 1:貼り付け位置 , 2:ファイルを削除するときTrue
     export_excel(_path=WRITE_FILE_PATH, _wb=wb, _sheet_name='グラフ', _img=list_img)
     # ファイルを開く
