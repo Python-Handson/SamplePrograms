@@ -1,15 +1,12 @@
 
-import pandas as pd
 import time
 import PyPDF2
-import datetime
 import urllib.request
 import re
 
 import sys
 import os
 import requests
-import dateutil.parser
 from bs4 import BeautifulSoup
 
 
