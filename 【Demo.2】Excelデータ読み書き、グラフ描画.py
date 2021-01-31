@@ -41,6 +41,8 @@ def main():
     df_output_data = df_excel_data.copy()
     # indexを都道府県名に変更
     df_output_data.index = df_output_data['都道府県']
+    # 列名の改行コードを除去
+    df_output_data.columns = df_output_data.columns.str.replace('\n', '')
     # '都道府県'列を削除
     df_output_data.drop(['都道府県'], axis=1, inplace=True) # inpcale:自インスタンスを直接変更する場合はTrue
     
